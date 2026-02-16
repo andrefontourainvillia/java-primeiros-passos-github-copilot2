@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -66,5 +67,68 @@ class ActivityServiceTest {
         
         // Then
         assertEquals("student@example.com inscrito(a) em Chess Club com sucesso", result.getMessage());
+    }
+
+    @Test
+    void shouldPropagateExceptionWhenStudentAlreadyRegistered() {
+        // Given
+        String activityName = "Chess Club";
+        String email = "student@example.com";
+
+        when(signupForActivityUseCase.execute(activityName, email))
+                .thenThrow(new IllegalArgumentException("Student is already registered for this activity"));
+
+        // When & Then
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> activityService.signupForActivity(activityName, email)
+        );
+        assertEquals("Student is already registered for this activity", exception.getMessage());
+    }
+
+    @Test
+    void shouldPropagateExceptionWhenActivityIsFull() {
+        // Given
+        String activityName = "Chess Club";
+        String email = "student@example.com";
+
+        when(signupForActivityUseCase.execute(activityName, email))
+                .thenThrow(new IllegalStateException("Activity is full. Maximum participants: 10"));
+
+        // When & Then
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> activityService.signupForActivity(activityName, email)
+        );
+        assertEquals("Activity is full. Maximum participants: 10", exception.getMessage());
+    }
+
+    @Test
+    void shouldPropagateExceptionWhenActivityNotFound() {
+        // Given
+        String activityName = "Non-existent Activity";
+        String email = "student@example.com";
+
+        when(signupForActivityUseCase.execute(activityName, email))
+                .thenThrow(new IllegalArgumentException("Atividade não encontrada"));
+
+        // When & Then
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> activityService.signupForActivity(activityName, email)
+        );
+        assertEquals("Atividade não encontrada", exception.getMessage());
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenNoActivitiesExist() {
+        // Given
+        when(getActivitiesUseCase.execute()).thenReturn(List.of());
+
+        // When
+        List<ActivityDto> result = activityService.getAllActivities();
+
+        // Then
+        assertEquals(0, result.size());
     }
 }

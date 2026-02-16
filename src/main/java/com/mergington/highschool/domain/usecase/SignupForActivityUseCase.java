@@ -30,7 +30,12 @@ public class SignupForActivityUseCase {
         
         Activity activity = activityRepository.findByName(activityName)
                 .orElseThrow(() -> new IllegalArgumentException("Atividade não encontrada"));
-        
+
+        // Validate email duplicity
+        if (activity.getParticipants().contains(email)) {
+            throw new IllegalStateException("Estudante já registrado para esta atividade");
+        }
+
         // Business logic is handled by the entity
         activity.addParticipant(email);
         
