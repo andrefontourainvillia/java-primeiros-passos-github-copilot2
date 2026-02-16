@@ -99,4 +99,143 @@ class SignupForActivityUseCaseTest {
         );
         assertEquals("Activity is full. Maximum participants: 1", exception.getMessage());
     }
+
+    @Test
+    void shouldThrowExceptionWhenStudentAlreadyRegistered() {
+        // Given
+        String activityName = "Chess Club";
+        String email = "student@example.com";
+        Activity activity = new Activity(activityName, "Chess description", "Fridays", 10);
+        activity.addParticipant(email);
+
+        when(activityRepository.findByName(activityName)).thenReturn(Optional.of(activity));
+
+        // When & Then
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> useCase.execute(activityName, email)
+        );
+        assertEquals("Estudante já registrado para esta atividade", exception.getMessage());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenEmailIsNull() {
+        // Given
+        String activityName = "Chess Club";
+        Activity activity = new Activity(activityName, "Chess description", "Fridays", 10);
+
+        when(activityRepository.findByName(activityName)).thenReturn(Optional.of(activity));
+
+        // When & Then
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> useCase.execute(activityName, null)
+        );
+        assertEquals("Email cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenEmailIsEmpty() {
+        // Given
+        String activityName = "Chess Club";
+        Activity activity = new Activity(activityName, "Chess description", "Fridays", 10);
+
+        when(activityRepository.findByName(activityName)).thenReturn(Optional.of(activity));
+
+        // When & Then
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> useCase.execute(activityName, "")
+        );
+        assertEquals("Email cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenEmailIsWhitespace() {
+        // Given
+        String activityName = "Chess Club";
+        Activity activity = new Activity(activityName, "Chess description", "Fridays", 10);
+
+        when(activityRepository.findByName(activityName)).thenReturn(Optional.of(activity));
+
+        // When & Then
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> useCase.execute(activityName, "   ")
+        );
+        assertEquals("Email cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenActivityNameIsWhitespace() {
+        // When & Then
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> useCase.execute("   ", "student@example.com")
+        );
+        assertEquals("Activity name cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    void shouldSignupMultipleStudentsSuccessfully() {
+        // Given
+        String activityName = "Chess Club";
+        String email1 = "student1@example.com";
+        String email2 = "student2@example.com";
+        Activity activity = new Activity(activityName, "Chess description", "Fridays", 10);
+
+        when(activityRepository.findByName(activityName))
+                .thenReturn(Optional.of(activity));
+        when(activityRepository.save(any(Activity.class))).thenReturn(activity);
+
+        // When
+        useCase.execute(activityName, email1);
+        useCase.execute(activityName, email2);
+
+        // Then
+        assertTrue(activity.getParticipants().contains(email1));
+        assertTrue(activity.getParticipants().contains(email2));
+        assertEquals(2, activity.getParticipants().size());
+    }
+
+    @Test
+    void shouldSignupStudentWhenActivityHasExactlyOneSpotLeft() {
+        // Given
+        String activityName = "Chess Club";
+        String newEmail = "newstudent@example.com";
+        Activity activity = new Activity(activityName, "Chess description", "Fridays", 2);
+        activity.addParticipant("existing@example.com");
+
+        when(activityRepository.findByName(activityName)).thenReturn(Optional.of(activity));
+        when(activityRepository.save(any(Activity.class))).thenReturn(activity);
+
+        // When
+        Activity result = useCase.execute(activityName, newEmail);
+
+        // Then
+        assertTrue(result.getParticipants().contains(newEmail));
+        assertEquals(2, result.getParticipants().size());
+        verify(activityRepository).save(activity);
+    }
+
+    @Test
+    void shouldReturnUpdatedActivityAfterSignup() {
+        // Given
+        String activityName = "Chess Club";
+        String email = "student@example.com";
+        Activity activity = new Activity(activityName, "Chess description", "Fridays", 10);
+        Activity savedActivity = new Activity(activityName, "Chess description", "Fridays", 10);
+        savedActivity.addParticipant(email);
+
+        when(activityRepository.findByName(activityName)).thenReturn(Optional.of(activity));
+        when(activityRepository.save(activity)).thenReturn(savedActivity);
+
+        // When
+        Activity result = useCase.execute(activityName, email);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(activityName, result.getName());
+        assertTrue(result.getParticipants().contains(email));
+    }
 }
